@@ -95,22 +95,23 @@ export function customerBalanceBrut(
  * Projeye ait net maliyet toplamı ve brüt kâr hesaplar.
  * Kâr (net) = anlaşma net − (masraf net + işçilik net + stok çıkış net)
  */
+// lib/agg.ts
+
 export function projectCostNet(
-  project: Project,
-  expenses: Expense[],
-  labors: Labor[],
-  stockOutNet: number,
-): { maliyet_net: number; kar_net: number } {
-  const expensesNet = expenses
-    .filter((e) => e.proje_id === project.id)
-    .reduce((sum, e) => sum + e.tutar_net + (e.kdv_maliyete_dahil ? e.tutar_kdv ?? 0 : 0), 0);
-  const laborsNet = labors
-    .filter((l) => l.proje_id === project.id)
-    .reduce((sum, l) => sum + l.tutar_net, 0);
-  const totalCostNet = expensesNet + laborsNet + stockOutNet;
-  const karNet = project.anlasma_net - totalCostNet;
-  return { maliyet_net: totalCostNet, kar_net: karNet };
+  expenses: { tutar_net: number; kdv_maliyete_dahil?: boolean; tutar_kdv?: number }[],
+  labors: { tutar_net: number }[],
+  stockOutNet: number
+) {
+  const expenseNet = expenses.reduce((sum, e) => {
+    const kdv = e.kdv_maliyete_dahil ? (e.tutar_kdv ?? 0) : 0;
+    return sum + e.tutar_net + kdv;
+  }, 0);
+
+  const laborNet = labors.reduce((s, l) => s + l.tutar_net, 0);
+
+  return expenseNet + laborNet + stockOutNet;
 }
+
 
 /**
  * Stok bakiye hesaplamaları. Giriş/iade pozitif, çıkış negatif.
