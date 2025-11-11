@@ -1,6 +1,6 @@
 import { Timestamp } from 'firebase/firestore';
 
-/** Veri tipleri tanımları */
+/** Basit tipler (yalın) */
 export interface Customer {
   id: string;
   unvan: string;
@@ -8,134 +8,104 @@ export interface Customer {
   toplam_tahsilat_brut?: number;
   bakiye_brut?: number;
 }
-
+export interface Receipt {
+  musteri_id: string;
+  tutar_brut: number;
+  tarih: any;
+}
 export interface Project {
   id: string;
   musteri_id: string;
   anlasma_net: number;
   anlasma_kdv: number;
   anlasma_brut: number;
-  toplam_maliyet_net?: number;
 }
-
-export interface Receipt {
-  id: string;
-  musteri_id: string;
-  tutar_brut: number;
-  tarih: Timestamp;
-}
-
 export interface Expense {
-  id: string;
   proje_id: string;
   tutar_net: number;
-  tutar_kdv?: number;
-  tutar_brut?: number;
   kdv_maliyete_dahil?: boolean;
+  tutar_kdv?: number;
 }
-
 export interface Labor {
-  id: string;
   proje_id: string;
   tutar_net: number;
 }
-
-export interface InventoryRow {
+export interface LedgerRow {
   katalog_id: string;
   miktar: number;
   birim: string;
   birim_maliyet_net?: number;
   toplam_net?: number;
 }
-
 export interface LedgerDoc {
-  id: string;
-  tarih: Timestamp;
+  proje_id?: string;
+  owner_musteri_id: string;
   tip: 'giris' | 'cikis' | 'iade' | 'transfer';
   konum: 'depo' | 'santiye';
-  owner_musteri_id: string;
-  proje_id?: string;
-  satirlar: InventoryRow[];
+  tarih: any;
+  satirlar: LedgerRow[];
 }
 
-/**
- * Müşteri bazında brüt bakiye hesaplar. Bakiye = anlaşma brüt toplamı − tahsilat brüt toplamı.
- */
+/** Cari bakiye (brüt) = projelerin anlasma_brut toplamı − tahsilat toplamı */
 export function customerBalanceBrut(
   customers: Customer[],
   projects: Project[],
-  receipts: Receipt[],
-): { [customerId: string]: { toplam_anlasma_brut: number; toplam_tahsilat_brut: number; bakiye_brut: number } } {
-  const result: { [id: string]: { toplam_anlasma_brut: number; toplam_tahsilat_brut: number; bakiye_brut: number } } = {};
-  customers.forEach((cust) => {
-    result[cust.id] = {
-      toplam_anlasma_brut: 0,
-      toplam_tahsilat_brut: 0,
-      bakiye_brut: 0,
-    };
+  receipts: Receipt[]
+) {
+  const projByCustomer = projects.reduce<Record<string, number>>((acc, p) => {
+    acc[p.musteri_id] = (acc[p.musteri_id] ?? 0) + (p.anlasma_brut ?? 0);
+    return acc;
+  }, {});
+  const recByCustomer = receipts.reduce<Record<string, number>>((acc, r) => {
+    acc[r.musteri_id] = (acc[r.musteri_id] ?? 0) + (r.tutar_brut ?? 0);
+    return acc;
+  }, {});
+  return customers.map((c) => {
+    const toplam_anlasma_brut = projByCustomer[c.id] ?? 0;
+    const toplam_tahsilat_brut = recByCustomer[c.id] ?? 0;
+    const bakiye_brut = toplam_anlasma_brut - toplam_tahsilat_brut;
+    return { ...c, toplam_anlasma_brut, toplam_tahsilat_brut, bakiye_brut };
   });
-  projects.forEach((p) => {
-    if (result[p.musteri_id]) {
-      result[p.musteri_id].toplam_anlasma_brut += p.anlasma_brut;
-    }
-  });
-  receipts.forEach((r) => {
-    if (result[r.musteri_id]) {
-      result[r.musteri_id].toplam_tahsilat_brut += r.tutar_brut;
-    }
-  });
-  Object.keys(result).forEach((id) => {
-    const v = result[id];
-    v.bakiye_brut = v.toplam_anlasma_brut - v.toplam_tahsilat_brut;
-  });
-  return result;
 }
 
-/**
- * Projeye ait net maliyet toplamı ve brüt kâr hesaplar.
- * Kâr (net) = anlaşma net − (masraf net + işçilik net + stok çıkış net)
- */
-// lib/agg.ts
-
+/** Proje net maliyeti (masraf + işçilik + stok çıkış netleri) */
 export function projectCostNet(
-  expenses: { tutar_net: number; kdv_maliyete_dahil?: boolean; tutar_kdv?: number }[],
-  labors: { tutar_net: number }[],
+  expenses: Expense[],
+  labors: Labor[],
   stockOutNet: number
 ) {
-  const expenseNet = expenses.reduce((sum, e) => {
+  const expenseNet = (expenses ?? []).reduce((sum, e) => {
     const kdv = e.kdv_maliyete_dahil ? (e.tutar_kdv ?? 0) : 0;
     return sum + e.tutar_net + kdv;
   }, 0);
-
-  const laborNet = labors.reduce((s, l) => s + l.tutar_net, 0);
-
-  return expenseNet + laborNet + stockOutNet;
+  const laborNet = (labors ?? []).reduce((s, l) => s + l.tutar_net, 0);
+  return expenseNet + laborNet + (stockOutNet ?? 0);
 }
 
+/** Konsolide stok bakiyesi: owner & proje & konum kırılımına göre miktar */
+export function inventoryBalances(ledger: LedgerDoc[]) {
+  type Key = string;
+  const key = (owner: string, proje: string | undefined, konum: string) =>
+    `${owner}||${proje ?? ''}||${konum}`;
 
-/**
- * Stok bakiye hesaplamaları. Giriş/iade pozitif, çıkış negatif.
- * Envanteri owner, proje ve konum bazında gruplayarak miktarları toplar.
- */
-export function inventoryBalances(ledger: LedgerDoc[]): {
-  [key: string]: {
-    [katalogId: string]: number;
-  };
-} {
-  const balances: {
-    [key: string]: {
-      [katalogId: string]: number;
-    };
-  } = {};
-  ledger.forEach((doc) => {
-    const sign = doc.tip === 'giris' || doc.tip === 'iade' ? 1 : doc.tip === 'cikis' ? -1 : 0;
-    const owner = doc.owner_musteri_id;
-    const location = doc.proje_id ? `${owner}|${doc.proje_id}|${doc.konum}` : `${owner}|depo|${doc.konum}`;
-    if (!balances[location]) balances[location] = {};
-    doc.satirlar.forEach((row) => {
-      const current = balances[location][row.katalog_id] || 0;
-      balances[location][row.katalog_id] = current + sign * row.miktar;
-    });
+  const map = new Map<Key, number>();
+
+  for (const doc of ledger ?? []) {
+    const k = key(doc.owner_musteri_id, doc.proje_id, doc.konum);
+    // miktar işareti: giris +, cikis -, iade + (depo'ya iade stok artırır), transfer 0
+    let sign = 0;
+    if (doc.tip === 'giris') sign = 1;
+    else if (doc.tip === 'cikis') sign = -1;
+    else if (doc.tip === 'iade') sign = 1;
+
+    const miktarToplam = (doc.satirlar ?? []).reduce((s, r) => s + (r.miktar ?? 0), 0);
+    const prev = map.get(k) ?? 0;
+    map.set(k, prev + sign * miktarToplam);
+  }
+
+  // Diziye dök
+  return Array.from(map.entries()).map(([k, qty]) => {
+    const [owner, proje, konum] = k.split('||');
+    return { owner_musteri_id: owner, proje_id: proje || undefined, konum, miktar: qty };
   });
-  return balances;
 }
