@@ -69,20 +69,17 @@ export default function DashboardPage() {
   const totalExpenseLast30 = last30Expenses.reduce((sum, e) => sum + e.tutar_net, 0);
 
   // Total kar net across all projects
-  const totalProfitNet = projects.reduce((sum, proj) => {
-    // stockOutNet: ledger docs with tip 'cikis' for this project
-    const stockOut = ledger
-      .filter((doc) => doc.proje_id === proj.id && doc.tip === 'cikis')
-      .reduce((s, doc) => {
-        return s + doc.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0);
-      }, 0);
-    const cost = projectCostNet(
-      expenses.filter((e) => e.proje_id === proj.id),
-      labors.filter((l) => l.proje_id === proj.id),
-      stockOut
-    );
-    return sum + cost.kar_net;
-  }, 0);
+const totalProfitNet = projects.reduce((sum, proj) => {
+  const stockOut = stockOutByProject[proj.id] ?? 0;
+  const costNet = projectCostNet(
+    expenses.filter(e => e.proje_id === proj.id),
+    labors.filter(l => l.proje_id === proj.id),
+    stockOut
+  );
+  const profitNet = proj.anlasma_net - costNet;
+  return sum + profitNet;
+}, 0);
+
 
   // Top 5 profitable projects (net profit) and top 5 expensive (cost)
   const projectMetrics = projects.map((proj) => {
