@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { projectCostNet } from '@/lib/agg';
 import { subscribeProjects, Project } from '@/lib/db/projects';
 import { subscribeExpenses, Expense } from '@/lib/db/expenses';
@@ -8,8 +9,8 @@ import { subscribeLabors, Labor } from '@/lib/db/labors';
 import { subscribeLedger, LedgerDoc } from '@/lib/db/ledger';
 import { Money } from '@/components/Money';
 
-export default function ProjectDetailPage({ params }: { params: { id: string } }) {
-  const id = params?.id as string;
+export default function ProjectDetailPage() {
+  const { id } = useParams<{ id: string }>();
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
