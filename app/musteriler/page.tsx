@@ -85,7 +85,7 @@ export default function CustomersPage() {
           <ReceiptForm
             customers={[{ id: selectedCustomer.id, unvan: selectedCustomer.unvan }]}
             projects={projectsSafe}
-            onSubmitSuccess={() => setSelectedCustomer(null)}
+            onSubmit={() => setSelectedCustomer(null)}
           />
         </div>
       )}
