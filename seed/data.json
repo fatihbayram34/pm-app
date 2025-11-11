@@ -1,0 +1,140 @@
+{
+  "customers": [
+    {
+      "unvan": "OMES",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "unvan": "SİNERCO",
+      "createdAt": "2024-01-01T00:00:00Z",
+      "updatedAt": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "catalog": [
+    { "kod": "001", "ad": "1x185mm N2XH", "birim": "Metre", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z" },
+    { "kod": "002", "ad": "1x95mm N2XH", "birim": "Metre", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z" },
+    { "kod": "003", "ad": "4x250A Siemens TMŞ", "birim": "Adet", "createdAt": "2024-01-01T00:00:00Z", "updatedAt": "2024-01-01T00:00:00Z" }
+  ],
+  "projects": [
+    {
+      "musteri_id": "OMES",
+      "ad": "OMES Fabrika Elektrik",
+      "durum": "Devam",
+      "anlasma_net": 500000,
+      "kdv_oran": 0.2,
+      "anlasma_kdv": 100000,
+      "anlasma_brut": 600000,
+      "baslangic": "2024-02-01T00:00:00Z",
+      "createdAt": "2024-02-01T00:00:00Z",
+      "updatedAt": "2024-02-01T00:00:00Z"
+    },
+    {
+      "musteri_id": "SİNERCO",
+      "ad": "SİNERCO Konut Projesi",
+      "durum": "Beklemede",
+      "anlasma_net": 800000,
+      "kdv_oran": 0.2,
+      "anlasma_kdv": 160000,
+      "anlasma_brut": 960000,
+      "baslangic": "2024-03-15T00:00:00Z",
+      "createdAt": "2024-03-15T00:00:00Z",
+      "updatedAt": "2024-03-15T00:00:00Z"
+    }
+  ],
+  "receipts": [
+    {
+      "musteri_id": "OMES",
+      "tarih": "2024-04-01T00:00:00Z",
+      "tutar_brut": 150000,
+      "yontem": "Havale/EFT",
+      "createdAt": "2024-04-01T00:00:00Z"
+    },
+    {
+      "musteri_id": "SİNERCO",
+      "tarih": "2024-05-01T00:00:00Z",
+      "tutar_brut": 350000,
+      "yontem": "Havale/EFT",
+      "createdAt": "2024-05-01T00:00:00Z"
+    }
+  ],
+  "inventoryLedger": [
+    {
+      "tarih": "2024-01-10T00:00:00Z",
+      "tip": "giris",
+      "konum": "depo",
+      "owner_musteri_id": "OMES",
+      "satirlar": [ { "katalog_id": "001", "miktar": 50, "birim": "Metre" } ],
+      "createdAt": "2024-01-10T00:00:00Z"
+    },
+    {
+      "tarih": "2024-01-10T00:00:00Z",
+      "tip": "giris",
+      "konum": "depo",
+      "owner_musteri_id": "SİNERCO",
+      "satirlar": [ { "katalog_id": "001", "miktar": 100, "birim": "Metre" } ],
+      "createdAt": "2024-01-10T00:00:00Z"
+    },
+    {
+      "tarih": "2024-02-05T00:00:00Z",
+      "tip": "giris",
+      "konum": "santiye",
+      "owner_musteri_id": "OMES",
+      "proje_id": "OMES Fabrika Elektrik",
+      "satirlar": [ { "katalog_id": "001", "miktar": 30, "birim": "Metre" } ],
+      "createdAt": "2024-02-05T00:00:00Z"
+    },
+    {
+      "tarih": "2024-02-10T00:00:00Z",
+      "tip": "cikis",
+      "konum": "santiye",
+      "owner_musteri_id": "OMES",
+      "proje_id": "OMES Fabrika Elektrik",
+      "satirlar": [ { "katalog_id": "001", "miktar": 20, "birim": "Metre", "toplam_net": 2000 } ],
+      "createdAt": "2024-02-10T00:00:00Z"
+    },
+    {
+      "tarih": "2024-02-20T00:00:00Z",
+      "tip": "iade",
+      "konum": "depo",
+      "owner_musteri_id": "OMES",
+      "proje_id": "OMES Fabrika Elektrik",
+      "satirlar": [ { "katalog_id": "001", "miktar": 5, "birim": "Metre" } ],
+      "createdAt": "2024-02-20T00:00:00Z"
+    }
+  ],
+  "expenses": [
+    {
+      "proje_id": "OMES Fabrika Elektrik",
+      "tarih": "2024-02-15T00:00:00Z",
+      "kategori": "Yakıt",
+      "tutar_net": 5000,
+      "createdAt": "2024-02-15T00:00:00Z"
+    },
+    {
+      "proje_id": "SİNERCO Konut Projesi",
+      "tarih": "2024-04-10T00:00:00Z",
+      "kategori": "Konaklama",
+      "tutar_net": 8000,
+      "createdAt": "2024-04-10T00:00:00Z"
+    }
+  ],
+  "labors": [
+    {
+      "proje_id": "OMES Fabrika Elektrik",
+      "tarih": "2024-02-18T00:00:00Z",
+      "personel": "Ahmet Yılmaz",
+      "saat": 8,
+      "tutar_net": 1500,
+      "createdAt": "2024-02-18T00:00:00Z"
+    },
+    {
+      "proje_id": "SİNERCO Konut Projesi",
+      "tarih": "2024-04-12T00:00:00Z",
+      "personel": "Mehmet Demir",
+      "gun": 1,
+      "tutar_net": 2000,
+      "createdAt": "2024-04-12T00:00:00Z"
+    }
+  ]
+}

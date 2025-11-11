@@ -1,0 +1,34 @@
+{
+  "name": "pm-app",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "firebase": "^9.0.0",
+    "react-hook-form": "^7.45.0",
+    "zod": "^3.22.2",
+    "@tanstack/react-query": "^5.8.0",
+    "dayjs": "^1.11.9",
+    "dayjs-plugin-utc": "^1.0.0",
+    "dayjs-plugin-timezone": "^1.0.0",
+    "recharts": "^2.3.2",
+    "react-virtuoso": "^4.2.0",
+    "clsx": "^1.2.1"
+  },
+  "devDependencies": {
+    "typescript": "latest",
+    "@types/react": "latest",
+    "@types/node": "latest",
+    "tailwindcss": "latest",
+    "postcss": "latest",
+    "autoprefixer": "latest"
+  }
+}
