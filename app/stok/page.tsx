@@ -9,6 +9,43 @@ import { StockDocForm } from '@/components/StockDocForm';
 import { inventoryBalances } from '@/lib/agg';
 import { useToast } from '@/components/ToastProvider';
 
+type BalanceMap = Record<string, Record<string, number>>;
+
+/**
+ * inventoryBalances çıktısını güvenle BalanceMap'e dönüştürür.
+ * - Eğer dizi gelirse: {owner_musteri_id, proje_id, konum, katalog_id, miktar} satırlarını toplar.
+ * - Eğer zaten map ise doğrudan döndürür.
+ */
+function toBalanceMap(input: unknown): BalanceMap {
+  if (!input) return {};
+  if (Array.isArray(input)) {
+    const acc: BalanceMap = {};
+    for (const row of input as any[]) {
+      const ownerId = row.owner_musteri_id ?? 'unknown';
+      const projId = row.proje_id ?? '-';
+      const konum = row.konum ?? '-';
+
+      // katalog id alan ismi farklı olabilir diye birkaç olası isim deniyoruz
+      const catId =
+        row.katalog_id ??
+        row.catalog_id ??
+        row.katalogId ??
+        row.catalogId ??
+        undefined;
+
+      const qty = Number(row.miktar ?? row.quantity ?? 0);
+      if (!catId) continue;
+
+      const key = `${ownerId}|${projId}|${konum}`;
+      acc[key] ??= {};
+      acc[key][catId] = (acc[key][catId] ?? 0) + qty;
+    }
+    return acc;
+  }
+  // zaten map ise
+  return input as BalanceMap;
+}
+
 export default function StockPage() {
   // Firestore’dan gelen STOK HAREKET LİSTESİ (dizi)
   const [ledgerList, setLedgerList] = useState<LedgerDoc[]>([]);
@@ -40,19 +77,20 @@ export default function StockPage() {
     }
   };
 
-  // Konsolide görünümler için agregasyon
-  // inventoryBalances: LedgerDoc[] -> Record<owner|proje|konum, Record<katalogId, miktar>>
-  const balances = inventoryBalances(ledgerList) as Record<string, Record<string, number>>;
+  // Konsolide görünümler – adapter ile tip güvenli hale getir
+  const rawBalances = inventoryBalances(ledgerList as any);
+  const balances = toBalanceMap(rawBalances);
 
   // Depo konsolide tablo: owner -> item -> quantity
   const ownerTable: Record<string, Record<string, number>> = {};
   Object.keys(balances).forEach((locKey) => {
-    // locKey format: ownerId|projeId|konum ("depo" veya "santiye")
+    // locKey: ownerId|projeId|konum
     const [ownerId] = locKey.split('|');
     const catBalances = balances[locKey] || {};
     if (!ownerTable[ownerId]) ownerTable[ownerId] = {};
     Object.keys(catBalances).forEach((catId) => {
-      ownerTable[ownerId][catId] = (ownerTable[ownerId][catId] || 0) + (catBalances[catId] || 0);
+      ownerTable[ownerId][catId] =
+        (ownerTable[ownerId][catId] || 0) + (catBalances[catId] || 0);
     });
   });
 
