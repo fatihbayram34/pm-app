@@ -79,11 +79,11 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {selectedCustomer && (
+      {selectedCustomer?.id && (
         <div className="rounded-2xl p-4 bg-white shadow">
           <h3 className="font-semibold mb-2">{selectedCustomer.unvan} – Tahsilat</h3>
           <ReceiptForm
-            customers={[selectedCustomer]}
+            customers={[{ id: selectedCustomer.id, unvan: selectedCustomer.unvan }]}
             projects={projectsSafe}
             onSubmitSuccess={() => setSelectedCustomer(null)}
           />
