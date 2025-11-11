@@ -8,10 +8,9 @@ export interface Customer {
   toplam_tahsilat_brut?: number;
   bakiye_brut?: number;
 }
-export interface Receipt {
+export interface ReceiptMinimal {
   musteri_id: string;
   tutar_brut: number;
-  tarih: any;
 }
 export interface Project {
   id: string;
@@ -50,13 +49,13 @@ export interface LedgerDoc {
 export function customerBalanceBrut(
   customers: Customer[],
   projects: Project[],
-  receipts: Receipt[]
+  receipts: ReceiptMinimal[]
 ) {
   const projByCustomer = projects.reduce<Record<string, number>>((acc, p) => {
     acc[p.musteri_id] = (acc[p.musteri_id] ?? 0) + (p.anlasma_brut ?? 0);
     return acc;
   }, {});
-  const recByCustomer = receipts.reduce<Record<string, number>>((acc, r) => {
+  const recByCustomer = (receipts ?? []).reduce<Record<string, number>>((acc, r) => {
     acc[r.musteri_id] = (acc[r.musteri_id] ?? 0) + (r.tutar_brut ?? 0);
     return acc;
   }, {});
