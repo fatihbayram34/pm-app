@@ -61,10 +61,15 @@ export default function ProjectDetailPage() {
   }
 
   // Compute cost and profit for project
-  const stockOutNet = ledger
-    .filter((d) => d.tip === 'cikis')
-    .reduce((s, d) => s + d.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0), 0);
-  const { maliyet_net, kar_net } = projectCostNet(project, expenses, labors, stockOutNet);
+  const stockOut = stockOutByProject[id] ?? 0;
+const costNet = projectCostNet(
+  expensesForThisProject,
+  laborsForThisProject,
+  stockOut
+);
+const profitNet = project.anlasma_net - costNet;
+// Ekranda: Anlaşma Net, Maliyet Net (costNet), Brüt Kâr (net) = profitNet
+
 
   // Expense form for adding new expense
   const expenseForm = useForm<any>({ resolver: zodResolver(ExpenseSchema as any), defaultValues: { proje_id: projectId, tarih: new Date(), kategori: '', tutar_net: 0 } });
