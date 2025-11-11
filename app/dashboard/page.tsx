@@ -91,11 +91,11 @@ export default function DashboardPage() {
       .filter((doc) => doc.proje_id === proj.id && doc.tip === 'cikis')
       .reduce((s, doc) => s + doc.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0), 0);
     const cost = projectCostNet(
-      proj,
-      expenses.filter((e) => e.proje_id === proj.id),
-      labors.filter((l) => l.proje_id === proj.id),
-      stockOut,
-    );
+  expenses.filter(e => e.proje_id === proj.id),
+  labors.filter(l => l.proje_id === proj.id),
+  stockOut
+);
+
     return {
       id: proj.id,
       ad: proj.ad,
