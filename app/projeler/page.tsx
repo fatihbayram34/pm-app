@@ -53,11 +53,11 @@ export default function ProjectsPage() {
       .filter((d) => d.proje_id === proj.id && d.tip === 'cikis')
       .reduce((s, d) => s + d.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0), 0);
     const cost = projectCostNet(
-      proj,
-      expenses.filter((e) => e.proje_id === proj.id),
-      labors.filter((l) => l.proje_id === proj.id),
-      stockOutNet,
-    );
+  expenses.filter(e => e.proje_id === proj.id),
+  labors.filter(l => l.proje_id === proj.id),
+  stockOut
+);
+
     return { id: proj.id, maliyet: cost.maliyet_net, kar: cost.kar_net };
   });
   const metricsMap = metrics.reduce((map, m) => {
