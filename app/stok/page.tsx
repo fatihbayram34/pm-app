@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from 'react';
 import { subscribeLedger, LedgerDoc, addLedgerDoc } from '@/lib/db/ledger';
@@ -10,14 +10,15 @@ import { inventoryBalances } from '@/lib/agg';
 import { useToast } from '@/components/ToastProvider';
 
 export default function StockPage() {
-  const [ledger, setLedger] = useState<LedgerDoc[]>([]);
+  // Firestore’dan gelen STOK HAREKET LİSTESİ (dizi)
+  const [ledgerList, setLedgerList] = useState<LedgerDoc[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const { showToast } = useToast();
 
   useEffect(() => {
-    const unsubLed = subscribeLedger((data) => setLedger(data));
+    const unsubLed = subscribeLedger((data) => setLedgerList(data));
     const unsubCat = subscribeCatalog((data) => setCatalog(data));
     const unsubCust = subscribeCustomers((data) => setCustomers(data));
     const unsubProj = subscribeProjects((data) => setProjects(data));
@@ -29,6 +30,7 @@ export default function StockPage() {
     };
   }, []);
 
+  // Form submit (StockDocForm kendi state’ini yönetiyor)
   const handleSubmit = async (values: any) => {
     try {
       await addLedgerDoc(values);
@@ -38,55 +40,65 @@ export default function StockPage() {
     }
   };
 
-  // Aggregation for stock views
-  const balances = inventoryBalances(ledger);
-  // Build consolidated table: owner -> item -> quantity
+  // Konsolide görünümler için agregasyon
+  // inventoryBalances: LedgerDoc[] -> Record<owner|proje|konum, Record<katalogId, miktar>>
+  const balances = inventoryBalances(ledgerList) as Record<string, Record<string, number>>;
+
+  // Depo konsolide tablo: owner -> item -> quantity
   const ownerTable: Record<string, Record<string, number>> = {};
-  Object.keys(balances).forEach((loc) => {
-    // loc key format: owner|proje|konum
-    const [ownerId] = loc.split('|');
-    const catBalances = balances[loc];
+  Object.keys(balances).forEach((locKey) => {
+    // locKey format: ownerId|projeId|konum ("depo" veya "santiye")
+    const [ownerId] = locKey.split('|');
+    const catBalances = balances[locKey] || {};
     if (!ownerTable[ownerId]) ownerTable[ownerId] = {};
     Object.keys(catBalances).forEach((catId) => {
-      ownerTable[ownerId][catId] = (ownerTable[ownerId][catId] || 0) + catBalances[catId];
+      ownerTable[ownerId][catId] = (ownerTable[ownerId][catId] || 0) + (catBalances[catId] || 0);
     });
   });
 
-  // Project remaining table: owner|project|location -> item -> quantity
-  const projectTable = balances; // Already keyed by owner|project|konum
+  // Proje kalan tablo: zaten balances (owner|project|konum) anahtarında
+  const projectTable = balances;
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Stok</h2>
+
+      {/* Stok Belgesi Oluştur */}
       <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
         <h3 className="text-lg font-medium mb-2">Stok Belgesi Oluştur</h3>
         <StockDocForm
-          catalog={catalog.map((c) => ({ id: c.id!, kod: c.kod, ad: c.ad, birim: c.birim }))}
-          customers={customers.map((c) => ({ id: c.id!, unvan: c.unvan }))}
-          projects={projects.map((p) => ({ id: p.id!, ad: p.ad, musteri_id: p.musteri_id }))}
+          catalog={catalog
+            .filter((c) => !!c.id)
+            .map((c) => ({ id: c.id!, kod: c.kod, ad: c.ad, birim: c.birim }))}
+          customers={customers
+            .filter((c) => !!c.id)
+            .map((c) => ({ id: c.id!, unvan: c.unvan }))}
+          projects={projects
+            .filter((p) => !!p.id)
+            .map((p) => ({ id: p.id!, ad: p.ad, musteri_id: p.musteri_id }))}
           onSubmit={handleSubmit}
         />
       </div>
+
+      {/* Depo Stok (Konsolide) */}
       <div>
         <h3 className="text-lg font-medium mb-2">Depo Stok (Konsolide)</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-2xl bg-white dark:bg-gray-800 shadow">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-gray-200 dark:bg-gray-700">
-                <th className="px-3 py-2">Müşteri</th>
-                {catalog.map((c) => (
-                  <th key={c.id} className="px-3 py-2 text-right">
-                    {c.kod}
-                  </th>
+                <th className="px-3 py-2 text-left">Müşteri</th>
+                {catalog.filter((c) => !!c.id).map((c) => (
+                  <th key={c.id!} className="px-3 py-2 text-right">{c.kod}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {customers.map((cust) => (
-                <tr key={cust.id} className="border-b dark:border-gray-700">
+              {customers.filter((cust) => !!cust.id).map((cust) => (
+                <tr key={cust.id!} className="border-b dark:border-gray-700">
                   <td className="px-3 py-2 whitespace-nowrap">{cust.unvan}</td>
-                  {catalog.map((c) => (
-                    <td key={c.id} className="px-3 py-2 text-right">
+                  {catalog.filter((c) => !!c.id).map((c) => (
+                    <td key={c.id!} className="px-3 py-2 text-right">
                       {ownerTable[cust.id!]?.[c.id!] ?? 0}
                     </td>
                   ))}
@@ -96,15 +108,17 @@ export default function StockPage() {
           </table>
         </div>
       </div>
+
+      {/* Proje Kalan */}
       <div>
         <h3 className="text-lg font-medium mb-2">Proje Kalan</h3>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-2xl bg-white dark:bg-gray-800 shadow">
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-gray-200 dark:bg-gray-700">
-                <th className="px-3 py-2">Sahip|Proje|Konum</th>
-                {catalog.map((c) => (
-                  <th key={c.id} className="px-3 py-2 text-right">{c.kod}</th>
+                <th className="px-3 py-2 text-left">Sahip | Proje | Konum</th>
+                {catalog.filter((c) => !!c.id).map((c) => (
+                  <th key={c.id!} className="px-3 py-2 text-right">{c.kod}</th>
                 ))}
               </tr>
             </thead>
@@ -112,9 +126,9 @@ export default function StockPage() {
               {Object.keys(projectTable).map((key) => (
                 <tr key={key} className="border-b dark:border-gray-700">
                   <td className="px-3 py-2 whitespace-nowrap">{key}</td>
-                  {catalog.map((c) => (
-                    <td key={c.id} className="px-3 py-2 text-right">
-                      {projectTable[key][c.id!] ?? 0}
+                  {catalog.filter((c) => !!c.id).map((c) => (
+                    <td key={c.id!} className="px-3 py-2 text-right">
+                      {projectTable[key]?.[c.id!] ?? 0}
                     </td>
                   ))}
                 </tr>
