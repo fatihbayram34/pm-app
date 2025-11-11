@@ -48,6 +48,7 @@ export default function DashboardPage() {
 
   // Toplam kâr (net) = anlaşma_net - (masraf + işçilik + stok çıkış)
   const totalProfitNet = projects.reduce((sum, proj) => {
+    if (!proj.id) return sum; // guard: optional id
     const stockOut = stockOutByProject[proj.id] ?? 0;
     const costNet = projectCostNet(
       expenses.filter(e => e.proje_id === proj.id),
