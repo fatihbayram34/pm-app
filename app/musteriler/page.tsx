@@ -84,7 +84,9 @@ export default function CustomersPage() {
           <h3 className="font-semibold mb-2">{selectedCustomer.unvan} – Tahsilat</h3>
           <ReceiptForm
             customers={[{ id: selectedCustomer.id, unvan: selectedCustomer.unvan }]}
-            projects={projectsSafe}          />
+            projects={projectsSafe}
+            onSubmitSuccess={() => setSelectedCustomer(null)}
+          />
         </div>
       )}
     </div>
