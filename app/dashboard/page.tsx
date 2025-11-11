@@ -77,10 +77,9 @@ export default function DashboardPage() {
         return s + doc.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0);
       }, 0);
     const cost = projectCostNet(
-      proj,
       expenses.filter((e) => e.proje_id === proj.id),
       labors.filter((l) => l.proje_id === proj.id),
-      stockOut,
+      stockOut
     );
     return sum + cost.kar_net;
   }, 0);
