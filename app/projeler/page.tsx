@@ -52,14 +52,15 @@ export default function ProjectsPage() {
     const stockOutNet = ledger
       .filter((d) => d.proje_id === proj.id && d.tip === 'cikis')
       .reduce((s, d) => s + d.satirlar.reduce((t, row) => t + (row.toplam_net ?? 0), 0), 0);
-    const cost = projectCostNet(
-  expenses.filter(e => e.proje_id === proj.id),
-  labors.filter(l => l.proje_id === proj.id),
-  stockOut
+const costNet = projectCostNet(
+  expenses.filter(e => e.proje_id === p.id),
+  labors.filter(l => l.proje_id === p.id),
+  stockOutByProject[p.id] ?? 0
 );
-
-    return { id: proj.id, maliyet: cost.maliyet_net, kar: cost.kar_net };
+const profitNet = p.anlasma_net - costNet;
   });
+
+  
   const metricsMap = metrics.reduce((map, m) => {
     map[m.id] = m;
     return map;
