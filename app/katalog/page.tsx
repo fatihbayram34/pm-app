@@ -1,108 +1,64 @@
-"use client";
+'use client';
 
 import React, { useEffect, useState } from 'react';
-import { subscribeCatalog, CatalogItem, addCatalogItem } from '@/lib/db/catalog';
-import { subscribeLedger } from '@/lib/db/ledger';
+import { subscribeCatalog, CatalogItem } from '@/lib/db/catalog';
+import { subscribeLedger, LedgerDoc } from '@/lib/db/ledger';
 import { inventoryBalances } from '@/lib/agg';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { CatalogSchema } from '@/lib/db/catalog';
-import { Money } from '@/components/Money';
-import { useToast } from '@/components/ToastProvider';
 
 export default function CatalogPage() {
-  const [items, setItems] = useState<CatalogItem[]>([]);
-  const [ledger, setLedger] = useState<any[]>([]);
-  const { showToast } = useToast();
-  const form = useForm<any>({ resolver: zodResolver(CatalogSchema as any), defaultValues: { kod: '', ad: '', birim: 'Adet' } });
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [ledger, setLedger] = useState<LedgerDoc[]>([]);
 
   useEffect(() => {
-    const unsubCat = subscribeCatalog((data) => setItems(data));
-    const unsubLed = subscribeLedger((data) => setLedger(data));
-    return () => {
-      unsubCat();
-      unsubLed();
-    };
+    const unsubs = [subscribeCatalog(setCatalog), subscribeLedger(setLedger)];
+    return () => unsubs.forEach((u) => u && (u as any)());
   }, []);
 
-  const handleAdd = form.handleSubmit(async (values) => {
-    try {
-      await addCatalogItem(values);
-      showToast('Katalog ürünü eklendi', 'success');
-      form.reset({ kod: '', ad: '', birim: 'Adet' });
-    } catch (err) {
-      showToast('Katalog eklenemedi', 'error');
-    }
-  });
+  // Konsolide toplam stok (katalog_id bazında)
+  // ledger satırlarını dolaşarak miktar topluyoruz: giriş +, çıkış -, iade +.
+  const totalStock: Record<string, number> = (ledger ?? []).reduce((acc, doc) => {
+    let sign = 0;
+    if (doc.tip === 'giris') sign = 1;
+    else if (doc.tip === 'cikis') sign = -1;
+    else if (doc.tip === 'iade') sign = 1; // depoya iade stok artırır
 
-  // calculate total stock per item from ledger
-  const balances = inventoryBalances(ledger);
-  // sum across all owners and locations
-  const totalStock: Record<string, number> = {};
-  Object.keys(balances).forEach((loc) => {
-    const catalogBalances = balances[loc];
-    Object.keys(catalogBalances).forEach((catId) => {
-      totalStock[catId] = (totalStock[catId] || 0) + catalogBalances[catId];
-    });
-  });
+    if (sign !== 0) {
+      for (const row of (doc.satirlar ?? [])) {
+        const catId = row.katalog_id;
+        const qty = row.miktar ?? 0;
+        acc[catId] = (acc[catId] ?? 0) + sign * qty;
+      }
+    }
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Katalog</h2>
-      <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl shadow">
-        <h3 className="text-lg font-medium mb-2">Yeni Ürün Ekle</h3>
-        <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-4 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-sm">Kod</label>
-            <input type="text" {...form.register('kod')} className="border rounded-lg p-2" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm">Ad</label>
-            <input type="text" {...form.register('ad')} className="border rounded-lg p-2" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-sm">Birim</label>
-            <select {...form.register('birim')} className="border rounded-lg p-2">
-              <option value="Adet">Adet</option>
-              <option value="Metre">Metre</option>
-              <option value="Kg">Kg</option>
-              <option value="Rulo">Rulo</option>
-              <option value="Set">Set</option>
-              <option value="Diğer">Diğer</option>
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button type="submit" className="px-3 py-2 bg-blue-600 text-white rounded-xl text-sm">
-              Ekle
-            </button>
-          </div>
-        </form>
-      </div>
-      <div className="overflow-x-auto">
-        <table className="min-w-full text-sm">
-          <thead>
-            <tr className="bg-gray-200 dark:bg-gray-700">
-              <th className="px-3 py-2">Kod</th>
-              <th className="px-3 py-2">Ad</th>
-              <th className="px-3 py-2">Birim</th>
-              <th className="px-3 py-2 text-right">Ortalama Maliyet (Net)</th>
-              <th className="px-3 py-2 text-right">Toplam Stok</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className="border-b dark:border-gray-700">
-                <td className="px-3 py-2">{item.kod}</td>
-                <td className="px-3 py-2">{item.ad}</td>
-                <td className="px-3 py-2">{item.birim}</td>
-                <td className="px-3 py-2 text-right">
-                  {item.ortalama_maliyet_net !== undefined ? <Money value={item.ortalama_maliyet_net} /> : '—'}
-                </td>
-                <td className="px-3 py-2 text-right">{totalStock[item.id!] ?? 0}</td>
+
+      <div className="rounded-2xl p-4 bg-white shadow">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500">
+                <th className="py-2">Kod</th>
+                <th className="py-2">Ad</th>
+                <th className="py-2">Birim</th>
+                <th className="py-2">Toplam Stok</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {catalog.map((c) => (
+                <tr key={c.id} className="border-t">
+                  <td className="py-2">{c.kod}</td>
+                  <td className="py-2">{c.ad}</td>
+                  <td className="py-2">{c.birim}</td>
+                  <td className="py-2">{totalStock[c.id!] ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
